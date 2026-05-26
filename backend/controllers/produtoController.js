@@ -1,239 +1,146 @@
-const db = require('../database/database');
+const db = require("../database/database");
 
-
-// =====================================
-// CRIAR PRODUTO
-// =====================================
-
-exports.criarProduto = (req, res) => {
-
-    const {
-        nome,
-        codigo_barras,
-        descricao,
-        quantidade,
-        categoria,
-        validade,
-        imagem
-    } = req.body;
-
-    // validar campos obrigatórios
-    if (
-        !nome ||
-        !codigo_barras ||
-        !descricao ||
-        !quantidade ||
-        !categoria
-    ) {
-
-        return res.status(400).json({
-            erro: 'Preencha todos os campos obrigatórios'
-        });
-
+const listarProdutos = (req, res) => {
+  db.all("SELECT * FROM produtos", [], (err, rows) => {
+    if (err) {
+      return res.status(500).json(err);
     }
 
-    // verificar código duplicado
-    const verificarSql = `
-        SELECT * FROM produtos
-        WHERE codigo_barras = ?
-    `;
-
-    db.get(
-        verificarSql,
-        [codigo_barras],
-        (err, row) => {
-
-            if (err) {
-
-                return res.status(500).json({
-                    erro: err.message
-                });
-
-            }
-
-            if (row) {
-
-                return res.status(400).json({
-                    erro:
-                        'Código de barras já cadastrado'
-                });
-
-            }
-
-            // inserir produto
-            const sql = `
-                INSERT INTO produtos (
-                    nome,
-                    codigo_barras,
-                    descricao,
-                    quantidade,
-                    categoria,
-                    validade,
-                    imagem
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `;
-
-            db.run(
-                sql,
-                [
-                    nome,
-                    codigo_barras,
-                    descricao,
-                    quantidade,
-                    categoria,
-                    validade,
-                    imagem
-                ],
-                function (err) {
-
-                    if (err) {
-
-                        return res.status(500).json({
-                            erro: err.message
-                        });
-
-                    }
-
-                    res.status(201).json({
-                        mensagem:
-                            'Produto cadastrado com sucesso!',
-                        id: this.lastID
-                    });
-
-                }
-            );
-
-        }
-    );
-
+    res.json(rows);
+  });
 };
 
+const cadastrarProduto = (req, res) => {
+  const {
+    nome,
+    codigo_barras,
+    descricao,
+    quantidade,
+    categoria,
+    validade,
+    imagem
+  } = req.body;
 
-// =====================================
-// LISTAR PRODUTOS
-// =====================================
+  db.run(
+    `
+    INSERT INTO produtos
+    (nome, codigo_barras, descricao, quantidade, categoria, validade, imagem)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      nome,
+      codigo_barras,
+      descricao,
+      quantidade,
+      categoria,
+      validade,
+      imagem
+    ],
+    function (err) {
+      if (err) {
+        return res.status(500).json(err);
+      }
 
-exports.listarProdutos = (req, res) => {
-
-    const sql = `
-        SELECT * FROM produtos
-    `;
-
-    db.all(
-        sql,
-        [],
-        (err, rows) => {
-
-            if (err) {
-
-                return res.status(500).json({
-                    erro: err.message
-                });
-
-            }
-
-            res.json(rows);
-
-        }
-    );
-
+      res.status(201).json({
+        mensagem: "Produto cadastrado com sucesso",
+        id: this.lastID
+      });
+    }
+  );
 };
 
+const editarProduto = (req, res) => {
+  const { id } = req.params;
 
-// =====================================
-// ATUALIZAR PRODUTO
-// =====================================
+  const {
+    nome,
+    codigo_barras,
+    descricao,
+    quantidade,
+    categoria,
+    validade,
+    imagem
+  } = req.body;
 
-exports.atualizarProduto = (req, res) => {
+  db.run(
+    `
+    UPDATE produtos
+    SET
+      nome = ?,
+      codigo_barras = ?,
+      descricao = ?,
+      quantidade = ?,
+      categoria = ?,
+      validade = ?,
+      imagem = ?
+    WHERE id = ?
+    `,
+    [
+      nome,
+      codigo_barras,
+      descricao,
+      quantidade,
+      categoria,
+      validade,
+      imagem,
+      id
+    ],
+    function (err) {
+      if (err) {
+        return res.status(500).json(err);
+      }
 
-    const { id } = req.params;
-
-    const {
-        nome,
-        codigo_barras,
-        descricao,
-        quantidade,
-        categoria,
-        validade
-    } = req.body;
-
-    const sql = `
-        UPDATE produtos
-        SET
-            nome = ?,
-            codigo_barras = ?,
-            descricao = ?,
-            quantidade = ?,
-            categoria = ?,
-            validade = ?
-        WHERE id = ?
-    `;
-
-    db.run(
-        sql,
-        [
-            nome,
-            codigo_barras,
-            descricao,
-            quantidade,
-            categoria,
-            validade,
-            id
-        ],
-        function (err) {
-
-            if (err) {
-
-                return res.status(500).json({
-                    erro: err.message
-                });
-
-            }
-
-            res.json({
-                mensagem:
-                    'Produto atualizado com sucesso!'
-            });
-
-        }
-    );
-
+      res.json({
+        mensagem: "Produto atualizado com sucesso"
+      });
+    }
+  );
 };
 
+const excluirProduto = (req, res) => {
+  const { id } = req.params;
 
-// =====================================
-// DELETAR PRODUTO
-// =====================================
+  db.run(
+    "DELETE FROM produtos WHERE id = ?",
+    [id],
+    function (err) {
+      if (err) {
+        return res.status(500).json(err);
+      }
 
-exports.deletarProduto = (req, res) => {
+      res.json({
+        mensagem: "Produto excluído com sucesso"
+      });
+    }
+  );
+};
 
-    const { id } = req.params;
+const buscarProdutoPorId = (req, res) => {
+  const { id } = req.params;
 
-    const sql = `
-        DELETE FROM produtos
-        WHERE id = ?
-    `;
+  db.get(
+    "SELECT * FROM produtos WHERE id = ?",
+    [id],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
 
-    db.run(
-        sql,
-        [id],
-        function (err) {
+      if (!row) {
+        return res.status(404).json({
+          mensagem: "Produto não encontrado"
+        });
+      }
 
-            if (err) {
+      res.json(row);
+    }
+  );
+};
 
-                return res.status(500).json({
-                    erro: err.message
-                });
-
-            }
-
-            res.json({
-                mensagem:
-                    'Produto deletado com sucesso!'
-            });
-
-        }
-    );
-
+module.exports = {
+  listarProdutos,
+  cadastrarProduto,
+  editarProduto,
+  excluirProduto,
+  buscarProdutoPorId
 };
